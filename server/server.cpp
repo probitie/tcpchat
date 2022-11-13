@@ -10,6 +10,8 @@
 #include <iostream>
 #include "logger.h"
 
+SOCKET connections[100];
+int currentConnectionIndex = 0;
 
 int main(int argc, char* argv[])
 {
@@ -53,22 +55,27 @@ int main(int argc, char* argv[])
 
 	SOCKET newConnection;
 
-	//                               client IP
-	newConnection = accept(sListen, (SOCKADDR*)&addr, &addrsize);
-
-	// check if client successfully connected to the server
-	if (newConnection == 0)
+	for (int i = 0; i < 100; i++)
 	{
-		errorlog("client can not connect to the server");
+		//                               client IP
+		newConnection = accept(sListen, (SOCKADDR*)&addr, &addrsize);
+
+		// check if client successfully connected to the server
+		if (newConnection == 0)
+		{
+			errorlog("client " << i << " can not connect to the server");
+		}
+		else
+		{
+			successlog("client " << i << " connected to the server");
+
+			// send some data as a responce
+			char message[256] = "a responce from the server";
+			send(newConnection, message, sizeof(message), NULL);
+			connections[i] = newConnection;
+			currentConnectionIndex++;
+		}
 	}
 
-	successlog("client connected to the server");
-		
-	// send some data as a responce
-	char message[256] = "hello there, you've just got a responce from the server";
-	send(newConnection, message, sizeof(message), NULL);
-
-
-	system("pause");
 	return 0;
 }
