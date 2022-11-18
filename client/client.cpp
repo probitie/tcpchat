@@ -1,96 +1,55 @@
-#define _WINSOCK_DEPRECATED_NO_WARNINGS
-
-
-// connect winsock static library
 #pragma comment(lib, "ws2_32.lib")
-
-// winsock header
 #include <winsock2.h>
-
 #include <iostream>
 #include <string>
-#include "logger.h"
+#pragma warning(disable: 4996)
 
 SOCKET Connection;
 
-void ClientHandler()
-{
+void ClientHandler() {
 	int msg_size;
-	while (true)
-	{
+	while (true) {
 		recv(Connection, (char*)&msg_size, sizeof(int), NULL);
-		debuglog("received message, length " << msg_size);
-		char* msgl = new char[100 + 1] {'\0'};
-		//msgl[msg_size] = '\0';
-		recv(Connection, msgl, msg_size, NULL);
-		debuglog("received message, context" << msgl);
-		std::cout << msgl << std::endl;
-		delete[] msgl;
+		char* msg = new char[msg_size + 1];
+		msg[msg_size] = '\0';
+		recv(Connection, msg, msg_size, NULL);
+		std::cout << msg << std::endl;
+		delete[] msg;
 	}
 }
 
-int main(int argc, char* argv[])
-{
-
-	// load library
-	WSAData wsaDate;
-
-	WORD DLLVersion = MAKEWORD(2, 1); // lib version 2.1
-
-	// if something went wrong with initializing
-	if (WSAStartup(DLLVersion, &wsaDate) != 0)
-	{
-		errorlog("can not load WinSock2.1 lib");
-		exit(-1);
+int main(int argc, char* argv[]) {
+	//WSAStartup
+	WSAData wsaData;
+	WORD DLLVersion = MAKEWORD(2, 1);
+	if (WSAStartup(DLLVersion, &wsaData) != 0) {
+		std::cout << "Error" << std::endl;
+		exit(1);
 	}
-	successlog("WinSock2.1 lib has been loaded");
 
-	// reserve an internet socket address
 	SOCKADDR_IN addr;
-	int addrsize = sizeof(addr);
-	addr.sin_addr.s_addr = inet_addr("127.0.0.1"); // set ip as localhost
-	addr.sin_port = htons(9999); // set a port
-	addr.sin_family = AF_INET; // internet protocol family
+	int sizeofaddr = sizeof(addr);
+	addr.sin_addr.s_addr = inet_addr("127.0.0.1");
+	addr.sin_port = htons(1111);
+	addr.sin_family = AF_INET;
 
-
-
-	////////// CLIENT STUFF ////////
-	
-	// connect to the server
 	Connection = socket(AF_INET, SOCK_STREAM, NULL);
-
-	// check if connection was successfull
-	if (connect(Connection, (SOCKADDR*)&addr, addrsize))
-	{
-		errorlog("Error: can not connect to the server");
-		return -1;
+	if (connect(Connection, (SOCKADDR*)&addr, sizeof(addr)) != 0) {
+		std::cout << "Error: failed connect to server.\n";
+		return 1;
 	}
-	
-	successlog("connected to the server");
+	std::cout << "Connected!\n";
 
-	// receive server responce
-	/*int resp_size;
-	recv(Connection, (char*)&resp_size, sizeof(int), NULL);
-	
-	char* responce = new char[resp_size];
-
-	recv(Connection, responce, resp_size, NULL);
-
-	// process responce
-	debuglog("oh, the server sent me smth: " << responce);
-	delete[] responce;
-	*/
 	CreateThread(NULL, NULL, (LPTHREAD_START_ROUTINE)ClientHandler, NULL, NULL, NULL);
-	std::string msgl;
-	while (true)
-	{
-		getline(std::cin, msgl);
-		int msg_size = msgl.size();
+
+	std::string msg1;
+	while (true) {
+		std::getline(std::cin, msg1);
+		int msg_size = msg1.size();
 		send(Connection, (char*)&msg_size, sizeof(int), NULL);
-		send(Connection, msgl.c_str(), msg_size, NULL);
+		send(Connection, msg1.c_str(), msg_size, NULL);
 		Sleep(10);
 	}
-
 
 	system("pause");
 	return 0;
