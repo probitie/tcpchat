@@ -9,9 +9,45 @@
 
 #include <iostream>
 #include "logger.h"
+#include <sstream>
 
 SOCKET connections[100];
-int currentConnectionIndex = 0;
+int currentConnectionsSize = 0;
+
+void clientHandler(int index)
+{
+	int msg_size;
+
+	while (true)
+	{
+		recv(connections[index], (char*)&msg_size, sizeof(int), NULL);
+		char* msgl = new char[msg_size + 1];
+		msgl[msg_size] = '\0';
+
+
+		recv(connections[index], msgl, msg_size, NULL);
+		debuglog("received message from client " << index << "; msg: " << msgl);
+		// s << "client " << index << ": " << msg;
+		//std::stringstream s;
+		//s << "user " << index << " : ";
+		//std::string&& ss = s.str();
+		//strncpy_s(msgl, msg_size, ss.c_str(), ss.size());
+		
+
+		for(int i = 0; i < currentConnectionsSize; i++)
+		{
+			if (i == index)
+				continue;
+			debuglog("client to send is " << i << " max is " << currentConnectionsSize);
+			debuglog("sending message size " << msg_size);
+			send(connections[index], (char*)&msg_size, sizeof(int), NULL);
+
+			debuglog("sending message context " << msgl);
+			send(connections[i], msgl, msg_size, NULL);
+		}
+		delete[] msgl;
+	}
+}
 
 int main(int argc, char* argv[])
 {
@@ -55,7 +91,7 @@ int main(int argc, char* argv[])
 
 	SOCKET newConnection;
 
-	for (int i = 0; i < 100; i++)
+	for (int i = 0; i < 100; i++) // 100  is how much connections do we want
 	{
 		//                               client IP
 		newConnection = accept(sListen, (SOCKADDR*)&addr, &addrsize);
@@ -70,10 +106,16 @@ int main(int argc, char* argv[])
 			successlog("client " << i << " connected to the server");
 
 			// send some data as a responce
-			char message[256] = "a responce from the server";
-			send(newConnection, message, sizeof(message), NULL);
+			/*std::string message = "user is connected";
+			int msg_size = message.size();
+			send(newConnection, (char*)&msg_size, sizeof(int), NULL);
+			send(newConnection, message.c_str(), msg_size, NULL);
+			*/
 			connections[i] = newConnection;
-			currentConnectionIndex++;
+			currentConnectionsSize++;
+			CreateThread(NULL, NULL,
+				(LPTHREAD_START_ROUTINE)clientHandler,
+				(LPWORD)(i), NULL, NULL);
 		}
 	}
 
